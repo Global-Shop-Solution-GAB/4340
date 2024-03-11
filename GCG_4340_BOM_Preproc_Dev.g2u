@@ -1,0 +1,422 @@
+﻿Program.Sub.ScreenSU.Start
+Gui.form1..Create(BaseForm)
+Gui.form1..Caption("Select a BOM")
+Gui.form1..Size(4245,2805)
+Gui.form1..MinX(0)
+Gui.form1..MinY(0)
+Gui.form1..Position(0,0)
+Gui.form1..AlwaysOnTop(False)
+Gui.form1..FontName("Tahoma")
+Gui.form1..FontSize(8.25)
+Gui.form1..ControlBox(True)
+Gui.form1..MaxButton(True)
+Gui.form1..MinButton(True)
+Gui.form1..MousePointer(0)
+Gui.form1..Moveable(True)
+Gui.form1..Sizeable(True)
+Gui.form1..ShowInTaskBar(True)
+Gui.form1..TitleBar(True)
+Gui.form1..Event(UnLoad,form1_UnLoad)
+Gui.form1.txtBOM.Create(TextBox,"",True,2700,300,0,345,375,True,0,"Tahoma",8.25,,1)
+Gui.form1.ddlExcp.Create(DropDownList)
+Gui.form1.ddlExcp.Enabled(True)
+Gui.form1.ddlExcp.Visible(True)
+Gui.form1.ddlExcp.Zorder(0)
+Gui.form1.ddlExcp.Size(1095,300)
+Gui.form1.ddlExcp.Position(345,1080)
+Gui.form1.ddlExcp.FontName("Tahoma")
+Gui.form1.ddlExcp.FontSize(8.25)
+Gui.form1.cmd1.Create(Button)
+Gui.form1.cmd1.Enabled(True)
+Gui.form1.cmd1.Visible(True)
+Gui.form1.cmd1.Zorder(0)
+Gui.form1.cmd1.Size(480,315)
+Gui.form1.cmd1.Position(3180,375)
+Gui.form1.cmd1.Caption("^")
+Gui.form1.cmd1.FontName("Tahoma")
+Gui.form1.cmd1.FontSize(8.25)
+Gui.form1.cmd1.Event(Click,cmdBrowse_Click)
+Gui.form1.cmd2.Create(Button)
+Gui.form1.cmd2.Enabled(True)
+Gui.form1.cmd2.Visible(True)
+Gui.form1.cmd2.Zorder(0)
+Gui.form1.cmd2.Size(1125,345)
+Gui.form1.cmd2.Position(345,1680)
+Gui.form1.cmd2.Caption("Ok")
+Gui.form1.cmd2.FontName("Tahoma")
+Gui.form1.cmd2.FontSize(8.25)
+Gui.form1.cmd2.Event(Click,cmdOk_Click)
+Gui.form1.lbl1.Create(Label,"BOM",True,330,195,0,375,135,True,0,"Tahoma",8.25,,0,0)
+Gui.form1.lbl1.BorderStyle(0)
+Gui.form1.lbl2.Create(Label,"Material Type",True,975,195,0,345,855,True,0,"Tahoma",8.25,,0,0)
+Gui.form1.lbl2.BorderStyle(0)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+V.Global.iBIRUNID.Declare(Long)
+V.Global.iBILOGID.Declare(Long)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+
+
+V.Local.sError.Declare(String)
+'coded by: WAW
+'Date: 2/20/2017
+'This will be a custom report that will print out an exploded BOM.
+
+'BN modified Feb 27, 2017
+
+F.ODBC.Connection!Conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+gui.form1.ddlExcp.AddItem("BS")
+gui.form1.ddlExcp.AddItem("PG")
+gui.form1.ddlExcp.AddItem("SS")
+gui.form1.ddlExcp.ListIndex(0)
+
+
+gui.form1..Visible(True)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4340_BOM_Preproc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(form1_unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Main.End
+
+Program.Sub.cmdOk_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdOk_Click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'make sure a BOM was selected
+f.Intrinsic.Control.If(v.Screen.form1!txtBOM.Text,=,"")
+	f.Intrinsic.UI.Msgbox("No BOM Selected!")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.Else
+	'close the form
+	gui.form1..Visible(false)
+	
+	f.ODBC.Connection!Conx.Execute("Delete from GCG_4340_BOM_PreProc")
+	f.Data.DataTable.CreateFromSQL("DT","conx","Select *  from GCG_4340_BOM_PreProc",true)
+'	BIRUNID,Item_No,Component,Rev,Description,Qty,UM,Shear_Size,Material,Program_No,Dept
+'	Function.Data.DataTable.AddColumn("DT", "AutoNum", "long", 0)
+	f.Intrinsic.Control.CallSub(gatherdata)
+f.Intrinsic.Control.EndIf
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdOk_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4340_BOM_Preproc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.cmdOk_Click.End
+
+Program.Sub.form1_UnLoad.Start
+F.Intrinsic.Control.SetErrorHandler("form1_UnLoad_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+gui.form1..Visible(false)
+f.ODBC.Connection!Conx.Close
+f.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("form1_UnLoad_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4340_BOM_Preproc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.End
+
+Function.Intrinsic.Control.EndIf
+Program.Sub.form1_UnLoad.End
+
+Program.Sub.cmdBrowse_Click.Start
+F.Intrinsic.Control.SetErrorHandler("GatherData_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(String)
+v.Local.sbom.Declare(String)
+
+'set type ahead
+f.Intrinsic.UI.SetBrowserHotTypeAhead(True)
+
+'display standard BOM browser for part/rev
+Function.Intrinsic.UI.Browser(3000, "", Variable.Local.sRet)
+Function.Intrinsic.Control.If(Variable.Local.sRet,"=","***CANCEL***")
+ Function.Intrinsic.UI.Msgbox("No BOM was selected!")
+Function.Intrinsic.Control.Else
+	'otherwise set the BOM info in the textbox
+ 	Function.Intrinsic.String.Split(Variable.Local.sRet,"*!*",Variable.Local.sRet)
+	'set the value in the textbox
+	gui.form1.txtBOM.Text(v.Local.sret(0))
+Function.Intrinsic.Control.EndIf
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("GatherData_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4340_BOM_Preproc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.cmdBrowse_Click.End
+
+Program.Sub.GatherData.Start
+F.Intrinsic.Control.SetErrorHandler("GatherData_Err")
+F.Intrinsic.Control.ClearErrors
+
+'General
+v.Local..BulkDeclareString(sError, ssql, sMap, sHold, sfilepath, sfile, sRealBomPath, sparams)
+'Parent
+v.Local..BulkDeclareString( sbom, sDescParent, sBomCheckedParent, sRevParent)
+'Child
+v.Local..BulkDeclareString(sret, sretline, sLevel, sValueCheck, sTag, sComponent, sRevComponent, sDescComponent, sUMComponent, sShear_SizeRaw, sShear_Size, sMaterial, sProg, sDept,  sGrandChild)
+
+v.Local..BulkDeclareFloat(fshearsize, fHold, fDim1, fDim2, fQty)
+v.Local..BulkDeclareLong(i, iLastBomLine)
+v.Local.iIncrement.Declare(long,1)
+V.Local.sTempPart.Declare(String)
+V.Local.sDTRet.Declare(String)
+V.Local.iTagNumber.Declare(Long)
+V.Local.sTagArray.Declare(String)
+V.Local.iUses.Declare(Long)
+
+
+F.Global.BI.GetRunID(v.Global.ibirunid)
+F.Global.BI.StartLogging(v.Global.ibirunid,-1,-1,"",v.Global.ibilogid)
+
+f.Intrinsic.UI.InvokeWaitDialog("Processing report")
+
+'We going to create a datatable to store the parts and the return that comes back from BOM_MSTR to keep track of the BOM Tag for each sequence
+F.Data.DataTable.Create("dtTags",True)
+F.Data.DataTable.AddColumn("dtTags","Part","String")
+F.Data.DataTable.AddColumn("dtTags","NumUse","Long")
+F.Data.DataTable.AddColumn("dtTags","Tags","String")
+
+f.Intrinsic.String.RPad(v.Screen.form1!txtBOM.Text," ",20,v.Local.sbom)
+'Fill the BOM header: Parent, Rev, Description, Bom_Checked:
+
+'Description & Bom_Checked (Memo_2 from BOM_ENG)
+F.Intrinsic.String.Build("Select Description, Memo_2 From V_BOM_ENG Where Part ='{0}'",v.Local.sbom,v.Local.sSQL)
+f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sHold)
+f.Intrinsic.String.Split(v.Local.sHold,"*!*", v.Local.sHold)
+v.Local.sDescParent.Set(v.Local.sHold(0))
+v.Local.sBomCheckedParent.Set(v.Local.sHold(1))
+
+'Rev (Text_Info2 from Inventory_MST2)
+F.Intrinsic.String.Build("Select Text_Info2 From V_Inventory_MST2 Where Part ='{0}'",v.Local.sbom,v.Local.sSQL)
+f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sRevParent)
+
+F.Intrinsic.String.Build("Insert into GCG_4340_BOM_HD_AL values('{0}','{1}','{2}','{3}','{4}')",V.Local.sbom, V.Local.sDescParent, V.Local.sBomCheckedParent,V.Local.sRevParent,V.Global.iBIRUNID,V.Local.ssql)
+F.ODBC.Connection!Conx.Execute(V.Local.ssql)
+
+'build the file to explode
+F.Intrinsic.String.Build("{0}\BOM{1}",V.System.Temp,V.Caller.Terminal,V.Local.sFilePath)
+F.Intrinsic.String.Build("0{0}{1}{0}{2}",V.Ambient.Tab,V.Local.sbom,v.Local.sFilePath,V.Local.sParams)
+F.Intrinsic.File.String2File(V.Local.sFilePath,V.Local.sParams)
+
+'F.Intrinsic.UI.Msgbox(V.Local.sfilepath)
+'fire the explode BOM callwrapper
+F.Global.General.CallWrapperSync(410000,V.Local.sFilePath)
+
+'send the file to a string array
+F.Intrinsic.File.FiletoStringArray(V.Local.sFilePath,v.Ambient.Tab,V.Local.sRealBomPath)
+
+'load it to a string
+F.Intrinsic.File.File2String(v.Local.sRealBomPath(3),V.Local.sret)
+'split the return
+f.Intrinsic.String.Split(v.Local.sret,v.Ambient.NewLine,v.Local.sret)
+
+'check the ubound
+f.Intrinsic.Control.If(v.Local.sret.UBound,>,0)
+	'loop through and check each part
+	f.Intrinsic.Math.Sub(v.Local.sret.UBound, 1, v.Local.iLastBomLine)
+	f.Intrinsic.Control.For(v.Local.i,7,v.Local.iLastBomLine,1)
+				
+		f.Intrinsic.String.Split(v.Local.sret(v.Local.i), "|~|",v.Local.sretline)		
+		v.Local.sComponent.Set(v.Local.sretline(2))
+		v.Local.fQty.Set(v.Local.sretline(6))
+		v.Local.sDescComponent.Set(v.Local.sretline(3))
+		'We only take the first level
+		f.Intrinsic.String.Replace(v.Local.sretline(1).Trim,"*","",v.Local.sLevel)
+		f.Intrinsic.String.Trim(v.Local.sLevel,v.Local.sLevel)
+		
+		f.Intrinsic.Control.If(v.Local.sLevel,=,"1")
+			'Item# is TAG from V_BOM_MSTR
+			f.Intrinsic.String.Build("Select Tag from V_BOM_MSTR where PART = '{0}' and Parent = '{1}'",V.Local.sretline(2).Trim,v.Local.sbom,v.Local.ssql)
+			f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sTag)
+			F.Intrinsic.String.Build("Part = '{0}'",V.Local.sRetLine(2).Trim,V.Local.sTempPart)
+			
+			F.Data.DataTable.Select("dtTags",V.Local.sTempPart.Trim,V.Local.sDTRet)
+			
+			'part hasn't been added yet
+			F.Intrinsic.Control.If(V.Local.sDTRet,=,"***NORETURN***")
+				'Set uses to 1 since we're about to use it. this way on the next loop it'll use 1 for the index IF the part shows up multiple times in the BOM
+				F.Data.DataTable.AddRow("dtTags","Part",V.Local.sRetLine(2).Trim,"NumUse",1,"Tags",V.Local.sTag)
+				'Split the tag so that we can use the first return.
+				F.Intrinsic.String.Split(V.Local.sTag,"#$#",V.Local.sTagArray)
+				V.Local.sTag.Set(V.Local.sTagArray(0))
+				'Lets go ahead and redim the variable so that we dont' accidentally keep data
+				V.Local.sTagArray.Redim(0,0)
+			F.Intrinsic.Control.Else
+				V.Local.iTagNumber.Set(V.Local.sDTRet.Long)
+				F.Intrinsic.String.Split(V.DataTable.dtTags(V.Local.iTagNumber).Tags!FieldValTrim,"#$#",V.Local.sTagArray)
+				V.Local.sTag.Set(V.Local.sTagArray(V.DataTable.dtTags(V.Local.iTagNumber).NumUse!FieldValLong))
+				'Increment the usage by one for the next go around if there's three.
+				F.Intrinsic.Math.Add(V.DataTable.dtTags(V.Local.iTagNumber).NumUse!FieldValLong,1,V.Local.iUses)
+				F.Data.DataTable.SetValue("dtTags",V.Local.iTagNumber,"NumUse",V.Local.iUses)
+				V.Local.sTagArray.Redim(0,0)				
+			F.Intrinsic.Control.EndIf
+			
+			'Rev component
+			F.Intrinsic.String.Build("Select Text_Info2, UM_INVENTORY, Text_Info1 From INVENTORY_MSTR i join V_Inventory_MST2 i2 on i.part = i2.part and i.location = i2.location Where i.Part ='{0}'",V.Local.sretline(2),v.Local.sSQL)
+			f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sHold)
+			'v.Local.sRevComponent_UM)		
+			f.Intrinsic.String.Split(v.Local.sHold,"*!*",v.Local.sHold)
+			v.Local.sRevComponent.set(v.Local.sHold(0))
+			v.Local.sUMComponent.set(v.Local.sHold(1))
+			v.Local.sValueCheck.set(v.Local.sHold(2))
+											
+			'Shear size is a dimensional field, 'DIMENSION_1 x DIMENSION_2' from V_BOM_CUTLIST
+			f.Intrinsic.String.Build("Select DIMENSION_1, DIMENSION_2 from V_BOM_CUTLIST where PART = '{0}'",V.Local.sretline(2),v.Local.ssql)
+			f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sShear_SizeRaw)
+			
+			F.Intrinsic.String.Split(V.Local.sShear_SizeRaw,"*!*",V.Local.sShear_SizeRaw)
+			v.Local.fDim1.Set(v.Local.sShear_SizeRaw(0))
+			v.Local.fDim2.Set(v.Local.sShear_SizeRaw(1))
+			
+			f.Intrinsic.Control.If(v.Local.fDim1,<>,0)
+				f.Intrinsic.Control.If(v.Local.fDim2,<>,0)
+					f.Intrinsic.String.Concat(V.Local.sShear_SizeRaw(0)," x ",V.Local.sShear_SizeRaw(1),v.Local.sShear_Size)
+				f.Intrinsic.Control.Else
+					v.Local.sShear_Size.Set(V.Local.sShear_SizeRaw(0))
+				f.Intrinsic.Control.EndIf			
+			f.Intrinsic.Control.Else
+				v.Local.sShear_Size.Set("")			
+			f.Intrinsic.Control.EndIf		
+			
+		
+	'========================
+			'Material is Description from the child of the child (Query Desc from V_BOM_ENG where Part = Child)
+			'Check to see if the text_info 1 is Yes of the child'		
+			f.Intrinsic.Control.If(v.Local.sValueCheck.Trim,<>,"Y")
+				F.Intrinsic.String.Build("select part from bom_mstr where parent = '{0}' and Part != Parent and Part != '' ",V.Local.sretline(2),v.Local.sSQL)
+				f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sGrandChild)
+				F.Intrinsic.String.Build("Select DESCRIPTION from V_BOM_ENG where part = '{0}'",v.Local.sGrandChild,v.Local.sSQL)
+				f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sMaterial)
+				'Handle the P, S values
+				
+				F.Intrinsic.String.Build("Select Code_Total From V_Inventory_MSTR Where Part ='{0}'",V.Local.sretline(2),v.Local.sSQL)
+				f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sHold) 
+				f.Intrinsic.String.Split(v.Local.sHold,"*!*",v.Local.sHold)
+				
+				Function.Intrinsic.Control.If(v.Local.sHold.Trim,=,"Y")
+					f.Intrinsic.Control.If(v.Screen.form1!ddlExcp.Text,=,"PG")
+						'string replace BS with PG in material 
+						f.Intrinsic.String.Replace(v.Local.sMaterial,"BS","PG",v.Local.sMaterial)					
+					f.Intrinsic.Control.elseIf(v.Screen.form1!ddlExcp.Text,=,"SS")
+						'string replace BS with PG in material 
+						f.Intrinsic.String.Replace(v.Local.sMaterial,"BS","304SS",v.Local.sMaterial)
+					Function.Intrinsic.Control.EndIf
+				Function.Intrinsic.Control.EndIf	
+				
+			f.Intrinsic.Control.Else
+				v.Local.sMaterial.Set("")
+			f.Intrinsic.Control.EndIf		
+			
+	'====================	
+			
+			'Prog # is MFG_NAME from V_INV_Cross_Ref where UCASE(MFG_Part) like 'AMADA%)
+			F.Intrinsic.String.Build("Select MFG_NAME from V_INV_CROSS_REF where UCASE(MFG_PART) like 'AMADA%' AND PART = '{0}'", V.Local.sretline(2),V.Local.ssql)
+			f.ODBC.Connection!Conx.ExecuteAndReturn(V.Local.ssql,v.Local.sProg)
+			
+			'Dept is Memo_1 from V_BOM_ENG
+			f.Intrinsic.String.Build("Select Memo_1 from V_BOM_ENG where PART = '{0}'",V.Local.sretline(2),v.Local.ssql)
+			f.ODBC.Connection!Conx.ExecuteAndReturn(v.Local.ssql,v.Local.sDept)
+			
+			'All should run similarly to the project 3929. We are recreating the subreport for BOM without the ties to the Work Order. 
+			'The preprocessor in the project 3929 gathers all of this information in the subroutine GET_BOMS, to be used as reference for questions.
+			'BN added Mar 2, 2017			
+			f.Intrinsic.String.Replace(v.Local.sTag,"#$#","'",v.Local.sTag)
+			Function.Data.DataTable.AddRowByMap("DT","AutoNum*!*BIRUNID*!*Item_No*!*Component*!*Rev*!*Description*!*Qty*!*UM*!*Shear_Size*!*Material*!*Program_No*!*Dept",v.Local.iIncrement,V.Global.iBIRUNID,v.Local.sTag.Trim,v.Local.sComponent.Trim,v.Local.sRevComponent.Trim,v.Local.sDescComponent.Trim,v.Local.fQty,v.Local.sUMComponent.Trim,v.Local.sShear_Size.Trim,v.Local.sMaterial.Trim,v.Local.sProg.Trim,v.Local.sDept.Trim)
+
+			f.ODBC.Connection!Conx.Execute(v.Local.ssql)
+			f.Intrinsic.Math.Add(v.Local.iIncrement,1,v.Local.iIncrement)
+		f.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.i)
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.UI.CloseWaitDialog
+
+v.Local.sMap.Set("AutoNum@!@AutoNum*!*BIRUNID@!@BIRUNID*!*Item_No@!@Item_No*!*Component@!@Component*!*Rev@!@Rev*!*Description@!@Description*!*Qty@!@Qty*!*UM@!@UM*!*Shear_Size@!@Shear_Size*!*Material@!@Material*!*Program_No@!@Program_No*!*Dept@!@Dept")
+
+Function.Data.DataTable.SaveToDB("DT", "conx", "GCG_4340_BOM_PreProc", "",128, v.Local.sMap)
+
+f.Intrinsic.Control.CallSub(printreport)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("GatherData_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4340_BOM_Preproc_Dev.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.GatherData.End
+
+Program.Sub.PrintReport.Start
+F.Intrinsic.Control.SetErrorHandler("PrintReport_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+'GENERATING REPORT
+V.Local..BulkDeclareString(sParam,sVal)
+
+'Stop Logging
+F.Global.BI.StopLogging(v.Global.ibilogid)
+V.Local.sVal.Set(v.Global.ibirunid)
+V.Local.sParam.Set("BIRUNID")
+
+'Print the Report
+F.Global.BI.RunReportPreProcessor(v.Global.ibirunid,v.Global.ibilogid,V.Local.sParam,V.Local.sVal,"GCG_4340_BOM_AL.rpt",-1,True,"",-1,"",-1,"","",v.Global.ibirunid)
+						 
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("PrintReport_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4340_BOM_Preproc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(form1_unload)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.PrintReport.End
+
+Program.Sub.Form_UnLoad.Start
+f.ODBC.Connection!Conx.Close
+f.Intrinsic.Control.End
+
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.Comments.Start
+${$5$}$20.1.8305.18039$}$1
+${$6$}$lperrine$}$20221117155326834$}$2NUFt80QpM3hrjXY+iDnxks7M/ROcjnGWtx+efOAbQRHPZ3d0Sj9qpkyuCMq8p12b/QBqD2qPRReJlct+aG6sA==
+Program.Sub.Comments.End
